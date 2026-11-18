@@ -7,11 +7,14 @@
 
 已实测：PETG 打印件装到位，推到底有硬限位，手铰传扭正常。
 
-用 [build123d](https://github.com/gumyr/build123d) 代码化建模，改一个参数就能重出。
+用 [build123d](https://github.com/gumyr/build123d) 代码化建模，改一个参数就能重出；
+换一把刀只需加一个 `reamers/*.json`，代码不用动。
 
-![等轴测](png/01_handle_iso.png)
+![等轴测](png/r01-2.36/01_handle_iso.png)
 
 ## 尺寸
+
+下表是第一把刀（`reamers/r01-2.36.json`）的数，换刀只改档案，不改这里。
 
 | 项目 | 值 | 参数名 |
 |---|---|---|
@@ -28,7 +31,7 @@
 | 最小壁厚 | 3.77 mm | — |
 | 体积 / 质量 | 1.06 cm³ / 1.35 g | `material = "PETG"` |
 
-![剖视](png/03_section.png)
+![剖视](png/r01-2.36/03_section.png)
 
 ## 孔系
 
@@ -79,6 +82,26 @@ x = 0 ─────────────── 10.00 ────── 12.
 
 别硬拧 —— 对不上角时方头的角顶在方孔入口，硬转会把入口啃圆。
 
+## 换一把刀
+
+一把刀一份档案，代码一行都不用改：
+
+```bash
+cp reamers/r01-2.36.json reamers/r02-2.80.json     # 文件名按柄径起，好认
+# 改这几个实测数：shank_d、square_size、square_size_min、
+#                square_tip_len、square_diag_meas、reamer_total_len
+
+python codes/handle_build.py --reamer r02-2.80      # → output/r02-2.80/
+python codes/render_preview.py --reamer r02-2.80    # → png/r02-2.80/
+```
+
+档案里**只写这把刀自己的实测数据**，外形尺寸、间隙、打印参数没写就用手柄默认值，
+所以不用抄一整套。每把刀的输出各进各的目录，打完这把再回头打那把，参数不会互相顶掉。
+
+- 不带 `--reamer` 时用 `params.py` 里的 `DEFAULT_PROFILE`，目前是 `r01-2.36`。
+- 键名写错会直接报错并列出可用键，不会静默忽略一个拼错的名字。
+- 新刀的方头若不是矩形（六角、带锥度），把 `square_drive` 设成 `false` 退回纯圆孔方案。
+
 ## 改参数
 
 ```bash
@@ -102,19 +125,22 @@ python codes/handle_build.py --set material=PLA
 ## 目录
 
 ```
+├── reamers/                一把刀一份档案（只写实测数）
+│   └── r01-2.36.json
 ├── codes/
-│   ├── params.py           ← 唯一需要改的文件
+│   ├── params.py           ← 手柄设计本身：外形 / 间隙 / 打印参数
 │   ├── handle_build.py     ← 建模 + 自检 + 导出
 │   └── render_preview.py   ← 出图（独立文件）
-├── output/                 reamer_handle.step / .stl / .3mf / print_notes.txt
-├── png/                    5 张预览图
+├── output/r01-2.36/        reamer_handle.step / .stl / .3mf / print_notes.txt
+├── png/r01-2.36/           5 张预览图
 ├── requirements.txt
 └── LICENSE
 ```
 
 ## 已知限制
 
-- 换刀要重量：方孔按 1.90 / 1.80 做的，换刀要改 `square_size`、`square_size_min`、`square_tip_len`。
+- 换刀不改代码：把 `reamers/r01-2.36.json` 另存一份，改 `shank_d`、`square_size`、
+  `square_size_min`、`square_tip_len`、`square_diag_meas`、`reamer_total_len`，再带 `--reamer` 跑。
 - 别指望压入锁死：FDM 手压配合做不到 0.02 以内，低于 0.02 大概率插不进。
 - PETG 长期受扭会有轻微冷流，旷量缓慢变大；但方孔是挡块结构，不会突然失效。
 - 方头若不是矩形（六角、带锥度），这套方孔不适用。

@@ -1,6 +1,7 @@
 铰刀手柄 · 打印与装配说明
 ======================================================================
-模型文件 : output/reamer_handle.step   /   output/reamer_handle.stl
+档案     : r01-2.36
+模型文件 : output/r01-2.36/reamer_handle.step   /   output/r01-2.36/reamer_handle.stl
 外形尺寸 : 15.00 × 10.00 × 10.00 mm
            （X 长 / Y 宽 / Z 高）
 体积     : 1.06 cm³      估算质量 : 1.3 g

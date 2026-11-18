@@ -2,15 +2,19 @@
 铰刀手柄 —— build123d 参数化建模（平放打印姿态）
 ==================================================
 
-跑这个文件 = 生成 STEP + STL + 打印说明（输出到 ../output）。
+跑这个文件 = 生成 STEP + STL + 打印说明（输出到 ../output/<档案名>/）。
 
 用法::
 
-    python codes/handle_build.py                        # 用 params.py 默认参数
+    python codes/handle_build.py                        # 用默认档案 r01-2.36
+    python codes/handle_build.py --reamer r02-xxx       # 换一把刀（reamers/r02-xxx.json）
     python codes/handle_build.py --set length=18        # 临时改一个参数
     python codes/handle_build.py --set bore_clearance=0.04
     python codes/handle_build.py --set teardrop=0       # 关掉孔顶泪滴
     python codes/handle_build.py --no-export            # 只建模不自检导出
+
+档案只写这把刀自己的实测数据（柄径、方头、刀长），外形和打印参数全走默认值，
+所以一把刀一个 JSON，互不覆盖。
 
 坐标约定见 params.py：X = 轴向（x=0 是插刀口），Z = 打印高度（z=0 贴床）。
 STL 已按平放姿态导出，切片软件里不要再旋转。
@@ -47,7 +51,7 @@ from build123d import (
 )
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from params import DEFAULT, MATERIALS, HandleParams  # noqa: E402
+from params import DEFAULT_PROFILE, DEFAULT, MATERIALS, HandleParams, load_profile  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT_DIR = ROOT / "output"
@@ -460,9 +464,15 @@ def report(p: HandleParams, body) -> dict:
 # ----------------------------------------------------------------------
 # 打印说明
 # ----------------------------------------------------------------------
-def write_print_notes(p: HandleParams, info: dict) -> Path:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = OUT_DIR / "print_notes.txt"
+def write_print_notes(p: HandleParams, info: dict,
+                      out_dir: Path | None = None, slug: str = "default") -> Path:
+    out_dir = OUT_DIR if out_dir is None else out_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / "print_notes.txt"
+    try:
+        rel_out = out_dir.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        rel_out = out_dir.name
     m = p.mat
     mass = info["volume_mm3"] / 1000.0 * m.density
 
@@ -589,7 +599,8 @@ def write_print_notes(p: HandleParams, info: dict) -> Path:
 
     text = f"""铰刀手柄 · 打印与装配说明
 ======================================================================
-模型文件 : output/{STEP_NAME}   /   output/{STL_NAME}
+档案     : {slug}
+模型文件 : {rel_out}/{STEP_NAME}   /   {rel_out}/{STL_NAME}
 外形尺寸 : {info['bbox'][0]:.2f} × {info['bbox'][1]:.2f} × {info['bbox'][2]:.2f} mm
            （X 长 / Y 宽 / Z 高）
 体积     : {info['volume_mm3'] / 1000:.2f} cm³      估算质量 : {mass:.1f} g
@@ -685,13 +696,21 @@ def parse_args(argv=None):
         metavar="KEY=VALUE",
         help="临时覆盖 params.py 里的参数，例如 --set length=18",
     )
+    ap.add_argument(
+        "--reamer",
+        default=DEFAULT_PROFILE,
+        metavar="NAME",
+        help=f"用哪份档案（reamers/<NAME>.json），默认 {DEFAULT_PROFILE}；"
+             "输出进 output/<NAME>/",
+    )
     ap.add_argument("--no-export", action="store_true", help="只建模不导出，用于调试")
     return ap.parse_args(argv)
 
 
 def main(argv=None) -> int:
     args = parse_args(argv)
-    p = DEFAULT
+    p, slug = load_profile(args.reamer)
+    out_dir = OUT_DIR / slug
 
     overrides: dict[str, object] = {}
     known = {f.name for f in fields(HandleParams)}
@@ -711,6 +730,7 @@ def main(argv=None) -> int:
     if overrides:
         p = p.with_overrides(**overrides)
 
+    print(f"档案：{slug}   →   output/{slug}/")
     print(p.summary())
 
     t0 = time.time()
@@ -725,15 +745,15 @@ def main(argv=None) -> int:
     info = report(p, body)
 
     if not args.no_export:
-        OUT_DIR.mkdir(parents=True, exist_ok=True)
-        step_path = OUT_DIR / STEP_NAME
-        stl_path = OUT_DIR / STL_NAME
+        out_dir.mkdir(parents=True, exist_ok=True)
+        step_path = out_dir / STEP_NAME
+        stl_path = out_dir / STL_NAME
         export_step(body, str(step_path))
         export_stl(body, str(stl_path), tolerance=0.004, angular_tolerance=0.08)
         print(f"\n已导出：\n  {step_path}\n  {stl_path}"
               f"\n  {step_path.stat().st_size/1024:.1f} KB / "
               f"{stl_path.stat().st_size/1024:.1f} KB")
-        notes = write_print_notes(p, info)
+        notes = write_print_notes(p, info, out_dir, slug)
         print(f"  {notes}")
 
     return 0

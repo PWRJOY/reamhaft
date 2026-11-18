@@ -4,6 +4,23 @@
 
 所有长度单位均为 mm。改完这里重跑 handle_build.py，渲染脚本会跟着变。
 
+多把铰刀怎么办（一把刀一份档案）
+--------------------------------
+    这里放的是「手柄设计本身」的默认值（外形、间隙、打印参数），所有刀共用。
+    每把刀自己的实测数据不进这里，而是存成 reamers/<名字>.json，只写实测那几项：
+
+        reamers/
+        ├── r01-2.36.json     柄 2.36，方头 1.90×1.80，刀长 57
+        └── r02-xxx.json      第二把
+
+    用法：
+        python codes/handle_build.py --reamer r02-xxx
+        python codes/render_preview.py --reamer r02-xxx
+
+    输出各进各的目录（output/<名字>/、png/<名字>/），互不覆盖。
+    不带 --reamer 时用 DEFAULT_PROFILE（= r01-2.36）。
+    这样一份代码、多份数据，第二把打完还能回头再打第一把，参数永远不会被顶掉。
+
 
 坐标约定（= 打印姿态，STL 按这个方向导出，切片时不要再转）
 ----------------------------------------------------------
@@ -61,8 +78,10 @@
 
 from __future__ import annotations
 
+import json
 import math
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -705,5 +724,59 @@ class HandleParams:
 DEFAULT = HandleParams()
 
 
+# ======================================================================
+# 档案：一把铰刀一份 JSON（只写实测那几项）
+# ======================================================================
+PROFILE_DIR = Path(__file__).resolve().parent.parent / "reamers"
+DEFAULT_PROFILE = "r01-2.36"
+
+_PROFILE_META = {"name", "note", "comment"}   # 说明性字段，不进参数
+
+
+def profile_path(name_or_path: str) -> Path:
+    """名字 → 路径。`r02` 等价于 `reamers/r02.json`；也可以直接给 .json 路径。"""
+    p = Path(name_or_path)
+    if p.suffix.lower() == ".json" or p.parent != Path("."):
+        return p if p.is_absolute() else (Path.cwd() / p)
+    return PROFILE_DIR / f"{p.name}.json"
+
+
+def list_profiles() -> list[str]:
+    """reamers/ 下所有档案名（不带 .json），按名字排序。"""
+    if not PROFILE_DIR.is_dir():
+        return []
+    return sorted(f.stem for f in PROFILE_DIR.glob("*.json"))
+
+
+def load_profile(name_or_path: str = DEFAULT_PROFILE) -> tuple[HandleParams, str]:
+    """读一份档案，返回 (参数, 档案名)。档案名同时用作输出子目录名。
+
+    JSON 里只需写跟这把刀有关的项，没写的就用手柄默认值 ——
+    所以换刀只写 shank_d / square_* / reamer_total_len 这几个数，外形和打印参数不用抄。
+    """
+    path = profile_path(name_or_path)
+    if not path.is_file():
+        avail = "、".join(list_profiles()) or "（reamers/ 下还没有档案）"
+        raise SystemExit(f"找不到档案 {path}\n现有：{avail}")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"档案 {path.name} 不是合法 JSON：{exc}") from exc
+    if not isinstance(data, dict):
+        raise SystemExit(f"档案 {path.name} 顶层必须是对象 {{...}}")
+
+    overrides = {k: v for k, v in data.items() if k not in _PROFILE_META}
+    known = {f.name for f in fields(HandleParams)}
+    unknown = sorted(set(overrides) - known)
+    if unknown:
+        raise SystemExit(
+            f"档案 {path.name} 里有不认识的键：{', '.join(unknown)}\n"
+            f"可用：{', '.join(sorted(known))}"
+        )
+    return replace(DEFAULT, **overrides), path.stem
+
+
 if __name__ == "__main__":
     print(DEFAULT.summary())
+    if list_profiles():
+        print("\n可用档案：" + "、".join(list_profiles()))

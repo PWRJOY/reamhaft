@@ -1,0 +1,11 @@
+{
+  "name": "r01-2.36",
+  "note": "第一把：Ø2.36 柄，方头 1.90×1.80×2.00 长，总长 57。已打印验证。",
+  "shank_d": 2.36,
+  "shank_len": 15.0,
+  "square_size": 1.90,
+  "square_size_min": 1.80,
+  "square_tip_len": 2.00,
+  "square_diag_meas": 2.36,
+  "reamer_total_len": 57.0
+}

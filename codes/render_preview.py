@@ -2,9 +2,10 @@
 铰刀手柄 —— 渲染预览图（与建模代码分开）
 ==========================================
 
-读取 handle_build.build_handle() 的实体，输出 PNG 到 ../png。
+读取 handle_build.build_handle() 的实体，输出 PNG 到 ../png/<档案名>/。
 
-    python codes/render_preview.py
+    python codes/render_preview.py                    # 默认档案 r01-2.36
+    python codes/render_preview.py --reamer r02-xxx   # 换一把刀
 
 为什么不用 matplotlib 的 3D / OpenGL：
     手柄带深盲孔 + 半剖，matplotlib 的画家算法（按三角形平均深度排序）
@@ -16,6 +17,7 @@
 
 from __future__ import annotations
 
+import argparse
 import sys
 import time
 from pathlib import Path
@@ -42,7 +44,7 @@ from build123d import (  # noqa: E402
     Vector,
     extrude,
 )
-from params import DEFAULT  # noqa: E402
+from params import DEFAULT, DEFAULT_PROFILE, load_profile  # noqa: E402
 from handle_build import _sketch_plane, build_handle  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -581,8 +583,21 @@ def view_assembled(handle, reamer, p):
 
 
 # ======================================================================
-def main() -> int:
-    p = DEFAULT
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(description="铰刀手柄预览图（与档案一一对应）")
+    ap.add_argument(
+        "--reamer",
+        default=DEFAULT_PROFILE,
+        metavar="NAME",
+        help=f"用哪份档案（reamers/<NAME>.json），默认 {DEFAULT_PROFILE}；出图到 png/<NAME>/",
+    )
+    args = ap.parse_args(argv)
+
+    global PNG_DIR
+    p, slug = load_profile(args.reamer)
+    PNG_DIR = ROOT / "png" / slug
+
+    print(f"档案：{slug}   →   png/{slug}/")
     print(p.summary())
     print("\n渲染中…")
     t0 = time.time()
