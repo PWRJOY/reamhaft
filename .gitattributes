@@ -1,0 +1,5 @@
+# 二进制文件禁止换行转换，否则 STEP/STL 会损坏
+*.png binary
+*.stl binary
+*.3mf binary
+*.step -text
