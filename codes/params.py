@@ -776,7 +776,54 @@ def load_profile(name_or_path: str = DEFAULT_PROFILE) -> tuple[HandleParams, str
     return replace(DEFAULT, **overrides), path.stem
 
 
+def profile_report(p: HandleParams, slug: str) -> str:
+    """把「档案里写的实测值」和「由它算出来的尺寸」并排列出来，方便核对。
+
+    档案里只有实测值，Ø2.46 这类都是算的 —— 这个函数就是让「算出来的东西」有地方看。
+    """
+    two = 2.0 * p.bore_clearance
+    lines = [
+        "=" * 64,
+        f" 档案 {slug}：实测值 → 派生尺寸",
+        "=" * 64,
+        "  实测（写进 JSON 的，只这几项）",
+        f"    柄身直径      Ø{p.shank_d:.2f}      圆柱段，孔径就看它",
+        f"    方头边长      {p.square_size:.2f} × {p.square_size_min:.2f}",
+        f"    方头长度      {p.square_tip_len:.2f}",
+        f"    方头对角      Ø{p.square_diag_meas:.2f}      卡尺跨角量，过孔看它",
+        f"    铰刀全长      {p.reamer_total_len:.1f}",
+        "",
+        "  派生（不用写，代码算）",
+        f"    插孔直径      Ø{p.bore_d:.2f}   = 柄径 {p.shank_d:.2f} + 2 × 单边 {p.bore_clearance:.2f}",
+        f"    方孔边长      {p.square_hole:.2f}   = 边长 {p.square_size:.2f} + 2 × 单边 {p.square_clearance:.2f}",
+        f"    圆孔 / 方孔深 {p.pass_len:.2f} / {p.square_len:.2f}",
+        f"    咬合长度      {p.square_engage:.2f}",
+        f"    柄身单边间隙  {p.shank_radial_gap:.3f}",
+        f"    方头过孔余量  {(p.bore_d - p.square_envelope_d) / 2:.3f}",
+        "=" * 64,
+        "",
+        "  两个 2.36 别搞混：柄身是圆柱直径，方头对角是跨角量的包络圆直径。",
+        "  方孔只按边长算（自带 45°，对角不用留），所以孔径只受柄身约束。",
+    ]
+    if abs(p.square_envelope_d - p.shank_d) > 1e-9:
+        lines += ["",
+                  f"  注意：这把刀的方头对角 Ø{p.square_envelope_d:.2f} ≠ 柄径 Ø{p.shank_d:.2f}，",
+                  "        过孔由两者中粗的那个决定（见 bore_d 的 max 分支）。"]
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
-    print(DEFAULT.summary())
-    if list_profiles():
-        print("\n可用档案：" + "、".join(list_profiles()))
+    import argparse
+
+    ap = argparse.ArgumentParser(description="查看参数 / 档案")
+    ap.add_argument("--reamer", metavar="NAME", help="看某份档案：实测值 → 派生尺寸")
+    ns = ap.parse_args()
+
+    if ns.reamer:
+        profile, name = load_profile(ns.reamer)
+        print(profile_report(profile, name))
+    else:
+        print(DEFAULT.summary())
+        if list_profiles():
+            print("\n可用档案：" + "、".join(list_profiles()))
+            print("看某份的实测→派生：python codes/params.py --reamer <名字>")
