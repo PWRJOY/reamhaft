@@ -49,6 +49,20 @@ x = 0 ─────────────── 10.00 ────── 12.
 孔径只看柄身：`2.36 + 2 × 0.05 = Ø2.46`。方头对角也是 2.36，和柄身一样粗，整根内切在柄身的
 圆柱包络里，不会卡孔。方孔只看边长：`1.90 + 2 × 0.05 = 2.00` —— 方孔自带 45° 角，对角不用留。
 
+## 实物
+
+r01-2.36 打出来的样子（PETG，橙色）：
+
+| 分开 | 装上 |
+|---|---|
+| ![刀与手柄](png/photos/01_parts.jpg) | ![装刀到位](png/photos/02_assembled.jpg) |
+
+![斜视](png/photos/03_assembled_angle.jpg)
+
+端面那圈小八边形就是孔口收口，收窄到 Ø7 之后剩的台阶正好用来瞄刀有没有插正：
+
+![孔口](png/photos/04_mouth.jpg)
+
 ## 设计要点
 
 - **平放打印**：八边形躺下，一条 15 × 4.14 mm 的窄带贴床，两侧 45° 面正好在免支撑临界角。
@@ -160,7 +174,10 @@ python codes/handle_build.py --set material=PLA
 │   ├── handle_build.py     ← 建模 + 自检 + 导出
 │   └── render_preview.py   ← 出图（独立文件）
 ├── output/r01-2.36/        reamer_handle.step / .stl / .3mf / print_notes.txt
-├── png/r01-2.36/           5 张预览图
+├── png/                    图片：代码渲染 + 实物照片
+│   ├── r01-2.36/           5 张渲染图
+│   ├── r02-3.16/
+│   └── photos/             实物照片
 ├── requirements.txt
 └── LICENSE
 ```
