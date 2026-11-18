@@ -128,6 +128,14 @@ def validate(p: HandleParams) -> None:
             )
         if p.square_len <= 0.0:
             errors.append("square_len 必须大于 0")
+        if p.square_tip_len > p.square_len + 1e-9:
+            short = p.socket_len - p.square_tip_len
+            errors.append(
+                f"方头长 {p.square_tip_len:.2f} > 方孔深 {p.square_len:.2f}，"
+                f"多出的 {p.square_tip_len - p.square_len:.2f} mm 会顶进孔底壁；"
+                f"把 square_len 改成 ≥ {p.square_tip_len:.2f}"
+                f"（圆孔段会缩到 {short:.2f}，孔底壁仍是 {p.floor_thickness:.2f}）"
+            )
         if p.square_start < 1.5:
             errors.append(
                 f"方孔入口只剩 x={p.square_start:.2f} 的让位孔，柄身几乎没有导向段；"
