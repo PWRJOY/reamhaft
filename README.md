@@ -106,9 +106,10 @@ python codes/handle_build.py --set material=PLA
 │   ├── params.py           ← 唯一需要改的文件
 │   ├── handle_build.py     ← 建模 + 自检 + 导出
 │   └── render_preview.py   ← 出图（独立文件）
-├── output/                 reamer_handle.step / .stl / print_notes.txt
+├── output/                 reamer_handle.step / .stl / .3mf / print_notes.txt
 ├── png/                    5 张预览图
-└── requirements.txt
+├── requirements.txt
+└── LICENSE
 ```
 
 ## 已知限制
